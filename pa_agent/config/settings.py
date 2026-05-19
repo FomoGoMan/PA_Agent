@@ -21,7 +21,7 @@ class GeneralSettings(BaseModel):
     """UI and data-feed general settings."""
     model_config = ConfigDict(extra="ignore")
 
-    default_bar_count: int = 200
+    default_bar_count: int = 100
     refresh_interval_ms: int = 1000
     context_warning_threshold_pct: float = 80.0
     last_symbol: str = "XAUUSD"

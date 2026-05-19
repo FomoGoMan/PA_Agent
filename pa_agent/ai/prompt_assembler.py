@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 # ── Hardcoded output format reminders ─────────────────────────────────────────
 
 _STAGE1_OUTPUT_REMINDER = """
-请严格按照以下 JSON 格式输出诊断结果，不要输出任何其他内容：
+请严格按照以下 JSON 格式输出诊断结果,不要输出任何其他内容:
 
 ```json
 {
@@ -35,13 +35,20 @@ _STAGE1_OUTPUT_REMINDER = """
 }
 ```
 
-diagnosis_confidence 必须为 0–100 的整数（满分100），表示对 cycle_position 等诊断结论的综合置信评分。
-禁止使用 high、medium、low 等字符串；分数越高表示对当前市场状态判断越有把握。
+diagnosis_confidence 必须为 0-100 的整数(满分100),表示对 cycle_position 等诊断结论的综合置信评分。
+禁止使用 high、medium、low 等字符串;分数越高表示对当前市场状态判断越有把握。
+
+diagnosis_confidence 分档说明:
+- 90-100:周期位置非常典型,K线特征完全匹配频谱定义,多时间框架方向一致,信号充分无矛盾
+- 70-89:周期位置较明确,主要特征吻合频谱定义,可能有个别模糊信号但不影响核心判断
+- 50-69:周期位置存在歧义(如 trending_tr vs normal_channel),信号部分矛盾,需更多K线确认;市场可能处于过渡阶段
+- 30-49:信号严重矛盾,周期位置难以判定,K线特征与多种状态都有部分重叠
+- 0-29:数据不足以支撑任何诊断,或市场状态极度混乱(如极端交易区间)
 """.strip()
 
 _STAGE2_OUTPUT_CONTRACT = """
 请严格按照以下 JSON 格式输出决策结果，不要输出任何其他内容。
-重要规则：当 order_type 为"不下单"时，entry_price、take_profit_price、stop_loss_price、order_direction 必须全部为 null。
+重要规则：当 order_type 为“不下单”时，entry_price、take_profit_price、stop_loss_price、order_direction 必须全部为 null。
 
 ```json
 {
@@ -52,7 +59,10 @@ _STAGE2_OUTPUT_CONTRACT = """
     "take_profit_price": null,
     "stop_loss_price": null,
     "reasoning": "",
-    "confidence": 75,
+    "diagnosis_confidence": 75,
+    "diagnosis_confidence_reasoning": "",
+    "trade_confidence": 70,
+    "trade_confidence_reasoning": "",
     "key_factors": [],
     "watch_points": [],
     "risk_assessment": "",
@@ -66,13 +76,25 @@ _STAGE2_OUTPUT_CONTRACT = """
 }
 ```
 
-confidence 字段说明（无论是否下单都必须填写整数 0-100）：
-- 表示对「本次决策」的综合把握：下单时表示入场方案可信度；不下单时表示对「观望/等待」判断的把握（非入场信心）
-- 90-100：极高把握，结构清晰、理由充分
-- 70-89：较高把握，主要逻辑明确
+置信度分为两部分，各自独立打分（均为 0–100 整数，必须填写）：
+
+一、diagnosis_confidence —— 对市场趋势与市场周期判断的把握
+分档说明：
+- 90-100：周期位置非常典型，趋势方向明确，多时间框架一致，K线特征完全匹配频谱定义
+- 70-89：周期位置较明确，趋势方向可判定，主要特征吻合，可能有个别模糊信号
+- 50-69：周期位置存在歧义（如 trending_tr vs normal_channel），趋势方向不够清晰，信号部分矛盾
+- 30-49：信号严重矛盾，周期位置难以判定，趋势方向不确定
+- 0-29：市场极度混乱或数据不足，无法做出有效诊断
+diagnosis_confidence_reasoning：必须简要说明打分依据（如“trending_tr 与 normal_channel 特征重叠，HTF 方向与小框架不一致”）
+
+二、trade_confidence —— 对交易决策本身的把握
+分档说明：
+- 90-100：极高把握，入场方案结构清晰、理由充分，风险回报比优异
+- 70-89：较高把握，主要逻辑明确，入场方案可行
 - 50-69：中等把握，存在不确定性但仍可执行当前决策（含观望）
 - 30-49：较低把握，建议继续等待更清晰信号
 - 0-29：极低把握；若同时判断不应交易，可配合 order_type="不下单"
+trade_confidence_reasoning：必须简要说明打分依据（如“入场信号明确但止损空间偏大，risk:reward 仅 1.5:1”）
 """.strip()
 
 # txt files merged into each stage system prompt (order preserved)
@@ -159,10 +181,10 @@ class PromptAssembler:
         kline_table = self._render_kline_table(frame)
         user_content = (
             f"## 当前分析目标\n\n"
-            f"品种：{frame.symbol}　周期：{frame.timeframe}　K线数量：{len(frame.bars)}\n\n"
-            f"## K线数据（序号1=最新已收盘K线，序号越大越早；不含当前未收盘K线）\n\n"
+            f"品种:{frame.symbol} 周期:{frame.timeframe} K线数量:{len(frame.bars)}\n\n"
+            f"## K线数据(序号1=最新已收盘K线,序号越大越早;不含当前未收盘K线)\n\n"
             f"{kline_table}\n\n"
-            f"请根据以上数据，按照系统提示中的格式输出 JSON 诊断结果。"
+            f"请根据以上数据,按照系统提示中的格式输出 JSON 诊断结果。"
         )
 
         return [
@@ -195,9 +217,9 @@ class PromptAssembler:
         kline_table = self._render_kline_table(frame)
         user_content = (
             f"## 阶段一诊断结果\n\n```json\n{json.dumps(stage1_json, ensure_ascii=False, indent=2)}\n```\n\n"
-            f"## K线数据（与阶段一相同）\n\n{kline_table}\n\n"
-            f"请根据以上诊断结果和K线数据，按照系统提示中的格式输出 JSON 决策结果。\n"
-            f"注意：如果判断不下单，entry_price、take_profit_price、stop_loss_price、order_direction 必须全部为 null。"
+            f"## K线数据(与阶段一相同)\n\n{kline_table}\n\n"
+            f"请根据以上诊断结果和K线数据,按照系统提示中的格式输出 JSON 决策结果。\n"
+            f"注意:如果判断不下单,entry_price、take_profit_price、stop_loss_price、order_direction 必须全部为 null。"
         )
 
         return [
@@ -220,7 +242,7 @@ class PromptAssembler:
     @staticmethod
     def _render_experience(entries: list[Any]) -> str:
         """Render experience library entries as a text block."""
-        lines = ["## 经验库（最近案例，供参考）"]
+        lines = ["## 经验库(最近案例,供参考)"]
         for i, entry in enumerate(entries, 1):
             if isinstance(entry, dict):
                 lines.append(

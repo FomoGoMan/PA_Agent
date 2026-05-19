@@ -35,7 +35,7 @@ def test_defaults(tmp_path, fake_secret_store):
     assert s.provider.thinking is True
     assert s.provider.reasoning_effort == "max"
     assert s.provider.context_window == 1_000_000
-    assert s.general.default_bar_count == 200
+    assert s.general.default_bar_count == 100
     assert s.general.last_symbol == "XAUUSD"
     assert p.exists(), "defaults should be written to disk"
 

@@ -29,9 +29,9 @@ def _make_reply(content_dict: dict) -> MagicMock:
 
 
 def test_stage2_invalid_confidence(frame, exc_counter, pending_writer, assembler, exp_reader):
-    """Stage 2 has confidence='ultra' (invalid enum) → category 'c', count == 1."""
+    """Stage 2 has trade_confidence='ultra' (invalid type) → category 'c', count == 1."""
     bad_stage2 = copy.deepcopy(VALID_STAGE2)
-    bad_stage2["decision"]["confidence"] = "ultra"
+    bad_stage2["decision"]["trade_confidence"] = "ultra"
 
     client = MagicMock()
     client.chat.side_effect = [

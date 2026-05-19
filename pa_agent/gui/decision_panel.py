@@ -86,7 +86,7 @@ def _score_color(score: int) -> str:
 
 
 def _parse_score_100(value: object) -> int | None:
-    """Parse 0–100 diagnosis confidence score."""
+    """Parse 0–100 confidence score."""
     if value is None or value == "":
         return None
     if isinstance(value, (int, float)):
@@ -98,7 +98,12 @@ def _parse_score_100(value: object) -> int | None:
 
 
 class DecisionPanel(QWidget):
-    """Renders market diagnosis + Stage-2 trading decision."""
+    """Renders market diagnosis + Stage-2 trading decision.
+
+    Confidence layout (two bars):
+      市场诊断区 → 市场判断置信度 (Stage 2 diagnosis_confidence)
+      交易决策区 → 交易决策置信度 (Stage 2 trade_confidence)
+    """
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -118,7 +123,7 @@ class DecisionPanel(QWidget):
         sep.setFrameShadow(QFrame.Shadow.Sunken)
         layout.addWidget(sep)
 
-        # ── 市场诊断（阶段一 / diagnosis_summary）────────────────────────────
+        # ── 市场诊断 ──────────────────────────────────────────────────────
         diag_title = QLabel("市场诊断")
         diag_title.setStyleSheet("font-weight: bold; color: #58a6ff;")
         layout.addWidget(diag_title)
@@ -140,9 +145,10 @@ class DecisionPanel(QWidget):
         self._phase_label.setObjectName("mutedLabel")
         layout.addWidget(self._phase_label)
 
-        diag_conf_title = QLabel("诊断置信度")
-        diag_conf_title.setStyleSheet("font-weight: bold; margin-top: 6px;")
-        layout.addWidget(diag_conf_title)
+        # ── 市场判断置信度（来自 Stage 2 diagnosis_confidence）───────────
+        self._diag_conf_title = QLabel("市场判断置信度")
+        self._diag_conf_title.setStyleSheet("font-weight: bold; margin-top: 6px;")
+        layout.addWidget(self._diag_conf_title)
 
         self._diag_conf_bar = QProgressBar()
         self._diag_conf_bar.setRange(0, 100)
@@ -152,14 +158,19 @@ class DecisionPanel(QWidget):
         layout.addWidget(self._diag_conf_bar)
 
         self._diag_conf_label = QLabel("—")
-        self._diag_conf_label.setObjectName("mutedLabel")
         layout.addWidget(self._diag_conf_label)
+
+        self._diag_reasoning_label = QLabel()
+        self._diag_reasoning_label.setWordWrap(True)
+        self._diag_reasoning_label.setObjectName("mutedLabel")
+        layout.addWidget(self._diag_reasoning_label)
 
         sep2 = QFrame()
         sep2.setFrameShape(QFrame.Shape.HLine)
         sep2.setFrameShadow(QFrame.Shadow.Sunken)
         layout.addWidget(sep2)
 
+        # ── 交易决策 ──────────────────────────────────────────────────────
         trade_title = QLabel("交易决策")
         trade_title.setStyleSheet("font-weight: bold;")
         layout.addWidget(trade_title)
@@ -195,19 +206,25 @@ class DecisionPanel(QWidget):
 
         layout.addWidget(self._details_widget)
 
-        self._decision_conf_title = QLabel("决策信心")
-        self._decision_conf_title.setStyleSheet("font-weight: bold; margin-top: 4px;")
-        layout.addWidget(self._decision_conf_title)
+        # ── 交易决策置信度（来自 Stage 2 trade_confidence）────────────────
+        self._trade_conf_title = QLabel("交易决策置信度")
+        self._trade_conf_title.setStyleSheet("font-weight: bold; margin-top: 4px;")
+        layout.addWidget(self._trade_conf_title)
 
-        self._confidence_bar = QProgressBar()
-        self._confidence_bar.setRange(0, 100)
-        self._confidence_bar.setTextVisible(True)
-        self._confidence_bar.setFormat("%v / 100")
-        self._confidence_bar.setMaximumHeight(22)
-        layout.addWidget(self._confidence_bar)
+        self._trade_conf_bar = QProgressBar()
+        self._trade_conf_bar.setRange(0, 100)
+        self._trade_conf_bar.setTextVisible(True)
+        self._trade_conf_bar.setFormat("%v / 100")
+        self._trade_conf_bar.setMaximumHeight(22)
+        layout.addWidget(self._trade_conf_bar)
 
-        self._confidence_label = QLabel()
-        layout.addWidget(self._confidence_label)
+        self._trade_conf_label = QLabel()
+        layout.addWidget(self._trade_conf_label)
+
+        self._trade_reasoning_label = QLabel()
+        self._trade_reasoning_label.setWordWrap(True)
+        self._trade_reasoning_label.setObjectName("mutedLabel")
+        layout.addWidget(self._trade_reasoning_label)
 
         reasoning_title = QLabel("分析理由")
         reasoning_title.setStyleSheet("font-weight: bold; color: #a371f7;")
@@ -223,12 +240,14 @@ class DecisionPanel(QWidget):
 
         self.clear()
 
+    # ── Data binding helpers ──────────────────────────────────────────────
+
     def _apply_market_diagnosis(
         self,
         diagnosis_summary: dict | None,
         stage1_diagnosis: dict | None = None,
     ) -> None:
-        """Fill trend / cycle from stage2 summary, fallback to stage1."""
+        """Fill trend / cycle / phase from stage2 summary, fallback to stage1."""
         src: dict = {}
         if diagnosis_summary:
             src.update(diagnosis_summary)
@@ -240,7 +259,6 @@ class DecisionPanel(QWidget):
         cycle_position = str(src.get("cycle_position", "") or "")
         alt_cycle = src.get("alternative_cycle_position")
         market_phase = str(src.get("market_phase", "") or "")
-        diag_conf_raw = src.get("diagnosis_confidence")
 
         trend = _infer_trend_label(direction, cycle_position)
         color = _trend_color(trend)
@@ -267,44 +285,70 @@ class DecisionPanel(QWidget):
         else:
             self._phase_label.setVisible(False)
 
-        diag_score = _parse_score_100(diag_conf_raw)
-        if diag_score is not None:
-            c_color = _score_color(diag_score)
-            self._diag_conf_bar.setValue(diag_score)
+    def _apply_diagnosis_confidence(
+        self,
+        diagnosis_confidence: object,
+        diagnosis_confidence_reasoning: str | None,
+    ) -> None:
+        """Render market-judgment confidence bar (Stage 2 diagnosis_confidence)."""
+        score = _parse_score_100(diagnosis_confidence)
+        if score is not None:
+            c_color = _score_color(score)
+            self._diag_conf_bar.setValue(score)
             self._diag_conf_bar.setStyleSheet(
                 f"QProgressBar::chunk {{ background-color: {c_color}; }}"
             )
-            self._diag_conf_label.setText(f"评分 {diag_score} / 100")
+            self._diag_conf_label.setText(f"评分 {score} / 100")
             self._diag_conf_label.setStyleSheet(f"color: {c_color}; font-weight: bold;")
+            reason_text = str(diagnosis_confidence_reasoning or "").strip()
+            self._diag_reasoning_label.setText(
+                f"理由：{reason_text}" if reason_text else ""
+            )
+            self._diag_conf_title.setVisible(True)
             self._diag_conf_bar.setVisible(True)
             self._diag_conf_label.setVisible(True)
+            self._diag_reasoning_label.setVisible(bool(reason_text))
         else:
             self._diag_conf_bar.setValue(0)
+            self._diag_conf_title.setVisible(False)
             self._diag_conf_bar.setVisible(False)
             self._diag_conf_label.setVisible(False)
+            self._diag_reasoning_label.setVisible(False)
 
-    def _apply_decision_confidence(
-        self, confidence: object, *, no_order: bool = False
+    def _apply_trade_confidence(
+        self,
+        trade_confidence: object,
+        trade_confidence_reasoning: str | None,
+        *,
+        no_order: bool = False,
     ) -> None:
-        score = _parse_score_100(confidence)
-        if score is None:
-            self._confidence_bar.setValue(0)
-            self._confidence_bar.setVisible(False)
-            self._confidence_label.setVisible(False)
-            self._decision_conf_title.setVisible(False)
-            return
+        """Render trade-decision confidence bar (Stage 2 trade_confidence)."""
+        score = _parse_score_100(trade_confidence)
+        if score is not None:
+            c_color = _score_color(score)
+            hint = "观望决策" if no_order else "入场决策"
+            self._trade_conf_bar.setValue(score)
+            self._trade_conf_bar.setStyleSheet(
+                f"QProgressBar::chunk {{ background-color: {c_color}; }}"
+            )
+            self._trade_conf_label.setText(f"评分 {score} / 100 · {hint}")
+            self._trade_conf_label.setStyleSheet(f"color: {c_color}; font-weight: bold;")
+            reason_text = str(trade_confidence_reasoning or "").strip()
+            self._trade_reasoning_label.setText(
+                f"理由：{reason_text}" if reason_text else ""
+            )
+            self._trade_conf_title.setVisible(True)
+            self._trade_conf_bar.setVisible(True)
+            self._trade_conf_label.setVisible(True)
+            self._trade_reasoning_label.setVisible(bool(reason_text))
+        else:
+            self._trade_conf_bar.setValue(0)
+            self._trade_conf_title.setVisible(False)
+            self._trade_conf_bar.setVisible(False)
+            self._trade_conf_label.setVisible(False)
+            self._trade_reasoning_label.setVisible(False)
 
-        c_color = _score_color(score)
-        self._confidence_bar.setValue(score)
-        self._confidence_bar.setStyleSheet(
-            f"QProgressBar::chunk {{ background-color: {c_color}; }}"
-        )
-        hint = "观望决策" if no_order else "入场决策"
-        self._confidence_label.setText(f"评分 {score} / 100 · {hint}")
-        self._confidence_label.setStyleSheet(f"color: {c_color}; font-weight: bold;")
-        self._decision_conf_title.setVisible(True)
-        self._confidence_bar.setVisible(True)
-        self._confidence_label.setVisible(True)
+    # ── Public API ────────────────────────────────────────────────────────
 
     def set_decision(
         self,
@@ -317,7 +361,12 @@ class DecisionPanel(QWidget):
 
         order_type = decision.get("order_type", _NO_ORDER)
         reasoning = decision.get("reasoning", decision.get("brief_reasoning", ""))
-        confidence = decision.get("confidence", None)
+        diag_conf = decision.get("diagnosis_confidence", None)
+        diag_conf_reasoning = decision.get("diagnosis_confidence_reasoning", None)
+        trade_conf = decision.get("trade_confidence", None)
+        trade_conf_reasoning = decision.get("trade_confidence_reasoning", None)
+
+        self._apply_diagnosis_confidence(diag_conf, diag_conf_reasoning)
 
         if order_type == _NO_ORDER:
             self._conclusion_label.setText("不下单")
@@ -326,7 +375,10 @@ class DecisionPanel(QWidget):
                 "color: #8b949e; background-color: #21262d; border-radius: 8px;"
             )
             self._details_widget.setVisible(False)
-            self._apply_decision_confidence(confidence, no_order=True)
+            self._apply_trade_confidence(
+                trade_conf, trade_conf_reasoning,
+                no_order=True,
+            )
         else:
             direction = decision.get("order_direction", "—")
             entry = decision.get("entry_price")
@@ -349,7 +401,10 @@ class DecisionPanel(QWidget):
             self._sl_label.setText(f"止损  {sl:.5g}" if sl is not None else "止损  —")
 
             self._details_widget.setVisible(True)
-            self._apply_decision_confidence(confidence, no_order=False)
+            self._apply_trade_confidence(
+                trade_conf, trade_conf_reasoning,
+                no_order=False,
+            )
 
         self._reasoning_edit.setPlainText(str(reasoning) if reasoning else "")
 
@@ -362,17 +417,22 @@ class DecisionPanel(QWidget):
         self._cycle_label.setText("市场周期：—")
         self._phase_label.setText("市场阶段：—")
         self._phase_label.setVisible(True)
+
         self._diag_conf_bar.setValue(0)
+        self._diag_conf_title.setVisible(False)
         self._diag_conf_bar.setVisible(False)
         self._diag_conf_label.setVisible(False)
+        self._diag_reasoning_label.setVisible(False)
 
         self._conclusion_label.setText("等待分析")
         self._conclusion_label.setStyleSheet(
             "font-size: 16px; font-weight: bold; padding: 12px; color: #6e7681;"
         )
         self._details_widget.setVisible(False)
-        self._decision_conf_title.setVisible(False)
-        self._confidence_bar.setValue(0)
-        self._confidence_bar.setVisible(False)
-        self._confidence_label.setVisible(False)
+
+        self._trade_conf_bar.setValue(0)
+        self._trade_conf_title.setVisible(False)
+        self._trade_conf_bar.setVisible(False)
+        self._trade_conf_label.setVisible(False)
+        self._trade_reasoning_label.setVisible(False)
         self._reasoning_edit.clear()

@@ -64,6 +64,10 @@ class FreeChatSession:
         SessionTokenLedger for accumulating token usage and cost.
     settings:
         Optional Settings object; used for ``reasoning_effort`` forwarding.
+    kline_snapshot_fn:
+        Optional callable that returns the latest closed K-line data as a
+        text table string.  Called on each ``send()`` so the AI always
+        sees the most recent market data.
     """
 
     #: When True, ``reasoning_content`` is preserved in assistant messages
@@ -78,6 +82,7 @@ class FreeChatSession:
         pending_writer: "PendingWriter",
         ledger: "SessionTokenLedger",
         settings: Optional["Settings"] = None,
+        kline_snapshot_fn: Optional[Callable[[], str]] = None,
     ) -> None:
         self._base_record = base_record
         self._client = client
@@ -85,6 +90,7 @@ class FreeChatSession:
         self._pending_writer = pending_writer
         self._ledger = ledger
         self._settings = settings
+        self._kline_snapshot_fn = kline_snapshot_fn
 
         # Turn counter — incremented before each send so the first turn is 1.
         self._turn: int = 0
@@ -184,8 +190,20 @@ class FreeChatSession:
                         "content": msg["content"],
                     })
 
-        # New user message
-        history_for_api.append({"role": "user", "content": user_text})
+        # New user message — prepend latest K-line snapshot if available
+        user_content = user_text
+        if self._kline_snapshot_fn is not None:
+            try:
+                kline_table = self._kline_snapshot_fn()
+                if kline_table:
+                    user_content = (
+                        f"## 最新已收盘K线数据\n\n{kline_table}\n\n"
+                        f"---\n\n{user_text}"
+                    )
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("kline_snapshot_fn failed: %s", exc)
+
+        history_for_api.append({"role": "user", "content": user_content})
 
         # ── 2. Resolve reasoning_effort ───────────────────────────────────────
         reasoning_effort = "max"

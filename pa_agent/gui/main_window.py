@@ -147,6 +147,7 @@ class MainWindow(QMainWindow):
         self._analysis_in_progress = False
         self._switching = False
         self._free_chat_session: Any = None
+        self._last_stage1_diagnosis: dict | None = None
         # RefreshLoop runs in its own QThread
         self._refresh_loop: Any = None
         self._refresh_thread: QThread | None = None
@@ -233,7 +234,7 @@ class MainWindow(QMainWindow):
         ctrl_layout.addWidget(QLabel("K线数:"))
         self._bar_count_spin = QSpinBox()
         self._bar_count_spin.setRange(2, 5000)
-        self._bar_count_spin.setValue(200)
+        self._bar_count_spin.setValue(100)
         self._bar_count_spin.setMinimumWidth(70)
         ctrl_layout.addWidget(self._bar_count_spin)
 
@@ -654,6 +655,7 @@ class MainWindow(QMainWindow):
             self._decision_panel.set_decision(
                 inner,
                 diagnosis_summary=decision.get("diagnosis_summary"),
+                stage1_diagnosis=self._last_stage1_diagnosis,
             )
             order = inner.get("order_type", "—")
             self._decision_badge.setText(f"决策: {order}")
@@ -725,6 +727,8 @@ class MainWindow(QMainWindow):
             )
 
         s1_diag = getattr(record, "stage1_diagnosis", None) or {}
+        # Cache for _on_analysis_finished (which fires after this)
+        self._last_stage1_diagnosis = s1_diag if isinstance(s1_diag, dict) else None
         s2_full = getattr(record, "stage2_decision", None)
         if s2_full:
             inner = s2_full.get("decision", s2_full)
@@ -772,6 +776,9 @@ class MainWindow(QMainWindow):
                 settings = getattr(self._ctx, "settings", None)
 
                 if all(x is not None for x in [client, assembler, pending_writer, ledger]):
+                    # Build a snapshot function that returns the latest closed K-line data
+                    kline_snapshot_fn = self._make_kline_snapshot_fn()
+
                     session = FreeChatSession(
                         base_record=record,
                         client=client,
@@ -779,6 +786,7 @@ class MainWindow(QMainWindow):
                         pending_writer=pending_writer,
                         ledger=ledger,
                         settings=settings,
+                        kline_snapshot_fn=kline_snapshot_fn,
                     )
                     chat_cancel_token = _CancelToken()
                     panel.set_session(session, chat_cancel_token)
@@ -895,6 +903,27 @@ class MainWindow(QMainWindow):
         except Exception as exc:  # noqa: BLE001
             logger.warning("Snapshot failed: %s", exc)
             return None
+
+    def _make_kline_snapshot_fn(self) -> Any:
+        """Return a callable that captures the latest closed K-line data as a text table.
+
+        The returned function reads from the live data source at call time,
+        so FreeChatSession always gets the most recent market data when the
+        user sends a follow-up message.
+        """
+        from pa_agent.ai.prompt_assembler import PromptAssembler
+
+        symbol = self._symbol_combo.currentText()
+        timeframe = self._tf_combo.currentText()
+        bar_count = self._bar_count_spin.value()
+
+        def _snapshot() -> str:
+            frame = self._take_snapshot(symbol, timeframe, bar_count)
+            if frame is None:
+                return ""
+            return PromptAssembler._render_kline_table(frame)
+
+        return _snapshot
 
     def _build_orchestrator(self) -> Any:
         """Build a TwoStageOrchestrator from ctx components, or return None."""
