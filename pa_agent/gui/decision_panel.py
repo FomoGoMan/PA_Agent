@@ -29,11 +29,11 @@ _NO_ORDER = "不下单"
 # Reasoning text — larger than default mutedLabel (11px)
 _REASON_FONT_CSS = "font-size: 14px; color: #c9d1d9; line-height: 1.45;"
 _REASON_EDIT_CSS = (
-    "font-size: 14px; color: #e6edf3; line-height: 1.45;"
+    "font-size: 14px; color: #1f2937; line-height: 1.45;"
     "font-family: 'Microsoft YaHei UI', 'Segoe UI', sans-serif;"
 )
 
-_PREDICTION_UNPREDICTABLE_COLOR = "#8b949e"
+_PREDICTION_UNPREDICTABLE_COLOR = "#6b7280"
 _PREDICTION_UNPREDICTABLE_LABEL = "不可预测"
 
 # 以震荡为主的周期类型
@@ -83,7 +83,7 @@ def _trend_color(label: str) -> str:
         return "#f85149"
     if label in ("震荡", "趋势运行中"):
         return "#e6b800"
-    return "#8b949e"
+    return "#6b7280"
 
 
 def _score_color(score: int) -> str:
@@ -246,12 +246,12 @@ class DecisionPanel(QWidget):
 
         self._conclusion_label = QLabel("—")
         self._conclusion_label.setStyleSheet(
-            "font-size: 18px; font-weight: bold; color: #8b949e;"
+            "font-size: 18px; font-weight: bold; color: #6b7280;"
         )
 
         self._direction_inline_label = QLabel()
         self._direction_inline_label.setStyleSheet(
-            "font-size: 14px; font-weight: bold; color: #8b949e;"
+            "font-size: 14px; font-weight: bold; color: #6b7280;"
         )
 
         self._trade_conf_inline_label = QLabel()
@@ -317,7 +317,7 @@ class DecisionPanel(QWidget):
     def _apply_diag_chip_style(self, label: QLabel, *, color: str) -> None:
         label.setStyleSheet(
             f"font-size: 14px; font-weight: bold; padding: 8px 10px;"
-            f"color: {color}; background-color: #21262d; border-radius: 8px;"
+            f"color: {color}; background-color: #f5f7fa; border-radius: 8px;"
         )
 
     # ── Data binding helpers ──────────────────────────────────────────────
@@ -429,7 +429,7 @@ class DecisionPanel(QWidget):
     def _set_conclusion_bar_style(self) -> None:
         self._conclusion_bar.setStyleSheet(
             "QFrame#conclusionBar {"
-            "  background-color: #21262d;"
+            "  background-color: #f5f7fa;"
             "  border-radius: 8px;"
             "}"
         )
@@ -477,7 +477,7 @@ class DecisionPanel(QWidget):
             self._reset_conclusion_bar_side_labels()
             self._conclusion_label.setText(_NO_ORDER)
             self._conclusion_label.setStyleSheet(
-                "font-size: 18px; font-weight: bold; color: #8b949e;"
+                "font-size: 18px; font-weight: bold; color: #6b7280;"
             )
             self._direction_inline_label.setText("")
             self._direction_inline_label.setVisible(False)

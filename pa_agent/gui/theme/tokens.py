@@ -6,15 +6,15 @@ from __future__ import annotations
 # ---------------------------------------------------------------------------
 
 # Backgrounds
-BG = "#0a0e14"
-SURFACE_1 = "#161b22"
-SURFACE_2 = "#1c2128"
-SURFACE_3 = "#21262d"
-SURFACE_4 = "#30363d"
+BG = "#ffffff"
+SURFACE_1 = "#f5f7fa"
+SURFACE_2 = "#e5e7eb"
+SURFACE_3 = "#e5e7eb"
+SURFACE_4 = "#d1d5db"
 
 # Text
-FG = "#e6edf3"
-FG_2 = "#8b949e"
+FG = "#1f2937"
+FG_2 = "#6b7280"
 FG_3 = "#6e7681"
 
 # Accents
@@ -31,7 +31,7 @@ INFO = "#38bdf8"
 # Trading
 CHART_UP = "#22c55e"
 CHART_DOWN = "#ef4444"
-CHART_GRID = "#1c2128"
+CHART_GRID = "#e5e7eb"
 CHART_LINE = "#fbbf24"
 CHART_LINE_2 = "#7dd3fc"
 CHART_LINE_3 = "#fb923c"

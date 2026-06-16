@@ -32,8 +32,8 @@ class _MetricCard(QFrame):
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
         self.setFrameShape(QFrame.Shape.NoFrame)
         self.setStyleSheet(
-            "background-color: #1c2128; "
-            "border: 1px solid #30363d; "
+            "background-color: #f5f7fa; "
+            "border: 1px solid #e5e7eb; "
             "border-radius: 6px;"
         )
 
@@ -43,7 +43,7 @@ class _MetricCard(QFrame):
         layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
         self._title = QLabel(title)
-        self._title.setStyleSheet("font-size: 11px; color: #8b949e;")
+        self._title.setStyleSheet("font-size: 11px; color: #6b7280;")
         self._title.setWordWrap(False)
         layout.addWidget(self._title)
 
@@ -57,7 +57,7 @@ class _MetricCard(QFrame):
             )
         else:
             self._value.setStyleSheet(
-                f"font-size: 13px; font-weight: bold; color: #e6edf3; font-family: {_FONT_MONO};"
+                f"font-size: 13px; font-weight: bold; color: #1f2937; font-family: {_FONT_MONO};"
             )
         layout.addWidget(self._value)
 
@@ -80,7 +80,7 @@ class SummaryStrip(QWidget):
         self.setObjectName("summaryStrip")
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
         self.setStyleSheet(
-            "background-color: #161b22; border-bottom: 1px solid #30363d;"
+            "background-color: #f5f7fa; border-bottom: 1px solid #30363d;"
         )
 
         self._layout = QGridLayout(self)

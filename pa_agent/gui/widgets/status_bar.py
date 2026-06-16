@@ -18,7 +18,7 @@ class EnhancedStatusBar(QWidget):
         self._color = "normal"
 
         self.setFixedHeight(28)
-        self.setStyleSheet("background-color: #161b22;")
+        self.setStyleSheet("background-color: #f5f7fa;")
 
         layout = QHBoxLayout(self)
         layout.setContentsMargins(14, 0, 14, 0)
@@ -26,7 +26,7 @@ class EnhancedStatusBar(QWidget):
 
         self._message = QLabel("")
         self._message.setStyleSheet(
-            "font-size: 11px; color: #8b949e;"
+            "font-size: 11px; color: #6b7280;"
             "border: none; background: transparent;"
         )
         layout.addWidget(self._message, stretch=1)
@@ -36,7 +36,7 @@ class EnhancedStatusBar(QWidget):
 
         ctx_label = QLabel("上下文")
         ctx_label.setStyleSheet(
-            "font-size: 11px; color: #8b949e;"
+            "font-size: 11px; color: #6b7280;"
             "border: none; background: transparent;"
         )
         right.addWidget(ctx_label)
@@ -55,7 +55,7 @@ class EnhancedStatusBar(QWidget):
 
         self._progress_label = QLabel("0% · 0 / 0")
         self._progress_label.setStyleSheet(
-            "font: 11px monospace; color: #8b949e;"
+            "font: 11px monospace; color: #6b7280;"
             "border: none; background: transparent;"
         )
         right.addWidget(self._progress_label)
@@ -138,9 +138,9 @@ class EnhancedStatusBar(QWidget):
         fill = chunk_colors.get(self._color, chunk_colors["normal"])
         self._progress.setStyleSheet(
             "QProgressBar {"
-            " border: 1px solid #30363d;"
+            " border: 1px solid #e5e7eb;"
             " border-radius: 999px;"
-            " background-color: #0a0e14;"
+            " background-color: #ffffff;"
             " max-height: 6px;"
             " text-align: center;"
             "}"

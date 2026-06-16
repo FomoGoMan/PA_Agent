@@ -14,8 +14,8 @@ DataSourceKind = Literal["mt5", "tradingview", "akshare", "eastmoney", "yfinance
 
 # UI-visible sources only — ``eastmoney`` is config/programmatic, not listed here.
 DATA_SOURCE_CHOICES: tuple[tuple[DataSourceKind, str], ...] = (
-    ("mt5", "MT5"),
     ("tradingview", "TradingView"),
+    ("mt5", "MT5"),
 )
 
 _HIDDEN_KINDS: frozenset[DataSourceKind] = frozenset(
@@ -41,7 +41,7 @@ def normalize_data_source_kind(kind: str | None) -> DataSourceKind:
     supported = {k for k, _ in DATA_SOURCE_CHOICES} | _HIDDEN_KINDS
     if kind in supported:
         return kind  # type: ignore[return-value]
-    return "mt5"
+    return "tradingview"
 
 
 def data_source_label(kind: str | None) -> str:

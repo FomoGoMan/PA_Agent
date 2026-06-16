@@ -569,7 +569,7 @@ class MainWindow(QMainWindow):
         self._disclaimer_label.setObjectName("mutedLabel")
         self._disclaimer_label.setWordWrap(True)
         self._disclaimer_label.setStyleSheet(
-            "color: #8b949e; font-size: 11px; padding: 2px 0;"
+            "color: #6b7280; font-size: 11px; padding: 2px 0;"
         )
         outer_layout.addWidget(self._disclaimer_label)
 
@@ -593,7 +593,7 @@ class MainWindow(QMainWindow):
         self._flow_bar = FlowBar()
         self._flow_bar.setFixedHeight(52)
         self._flow_bar.setStyleSheet(
-            "background-color: #161b22; border-bottom: 1px solid #30363d;"
+            "background-color: #f5f7fa; border-bottom: 1px solid #e5e7eb;"
         )
         outer_layout.addWidget(self._flow_bar)
 

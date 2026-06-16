@@ -31,7 +31,7 @@ from pa_agent.gui.prediction_format import (
 )
 
 _REASON_EDIT_CSS = (
-    "font-size: 16px; color: #e6edf3; line-height: 1.45;"
+    "font-size: 16px; color: #1f2937; line-height: 1.45;"
     "font-family: 'Microsoft YaHei UI', 'Segoe UI', sans-serif;"
 )
 
@@ -43,7 +43,7 @@ _DIRECTION_ZH: dict[str, str] = {
 
 _CHIP_BASE_CSS = (
     "font-size: 14px; font-weight: bold; padding: 8px 10px;"
-    "background-color: #21262d; border-radius: 8px;"
+    "background-color: #f5f7fa; border-radius: 8px;"
 )
 
 
@@ -93,7 +93,7 @@ class FutureTrendPanel(QWidget):
         self._bar_direction_label.setWordWrap(True)
         self._bar_direction_label.setStyleSheet(
             "font-size: 16px; font-weight: bold; padding: 8px;"
-            "background-color: #21262d; border-radius: 6px; color: #8b949e;"
+            "background-color: #f5f7fa; border-radius: 6px; color: #6b7280;"
         )
         bar_layout.addWidget(self._bar_direction_label)
 
@@ -147,7 +147,7 @@ class FutureTrendPanel(QWidget):
         self._cycle_direction_label = QLabel("—")
         self._cycle_direction_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._cycle_direction_label.setStyleSheet(
-            "font-size: 14px; font-weight: bold; color: #8b949e;"
+            "font-size: 14px; font-weight: bold; color: #6b7280;"
         )
         cycle_layout.addWidget(self._cycle_direction_label)
 
@@ -156,7 +156,7 @@ class FutureTrendPanel(QWidget):
         self._cycle_probs_label.setWordWrap(True)
         self._cycle_probs_label.setStyleSheet(
             "font-size: 13px; color: #c9d1d9; padding: 6px;"
-            "background-color: #161b22; border-radius: 6px;"
+            "background-color: #f5f7fa; border-radius: 6px;"
         )
         cycle_layout.addWidget(self._cycle_probs_label)
 
@@ -201,7 +201,7 @@ class FutureTrendPanel(QWidget):
         self._bar_direction_label.setText(line)
         self._bar_direction_label.setStyleSheet(
             f"font-size: 16px; font-weight: bold; padding: 8px;"
-            f"background-color: #21262d; border-radius: 6px; color: {color};"
+            f"background-color: #f5f7fa; border-radius: 6px; color: {color};"
         )
 
         reasoning = str(pred.get("reasoning", "")).strip()
@@ -319,7 +319,7 @@ class FutureTrendPanel(QWidget):
         self._bar_direction_label.setText("—")
         self._bar_direction_label.setStyleSheet(
             "font-size: 16px; font-weight: bold; padding: 8px;"
-            "background-color: #21262d; border-radius: 6px; color: #8b949e;"
+            "background-color: #f5f7fa; border-radius: 6px; color: #6b7280;"
         )
         self._bar_reasoning_edit.clear()
 

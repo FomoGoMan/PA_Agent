@@ -15,7 +15,7 @@ class _ToastLabel(QLabel):
         self.setStyleSheet(
             "QLabel {"
             " background-color: rgba(28,33,40,0.92);"
-            " color: #e6edf3;"
+            " color: #1f2937;"
             " border: 1px solid #38bdf8;"
             " border-radius: 8px;"
             " padding: 8px 16px;"

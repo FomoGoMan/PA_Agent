@@ -167,7 +167,7 @@ class AIStreamPanel(QWidget):
         box = QWidget()
         box.setStyleSheet(
             "QWidget {"
-            " background: #161b22;"
+            " background: #f5f7fa;"
             " border-top: 1px solid #30363d;"
             "}"
         )
@@ -181,10 +181,10 @@ class AIStreamPanel(QWidget):
         self._input_edit.setFixedHeight(44)
         self._input_edit.setStyleSheet(
             "QLineEdit {"
-            " border: 1px solid #30363d;"
+            " border: 1px solid #e5e7eb;"
             " border-radius: 6px;"
-            " background: #0a0e14;"
-            " color: #e6edf3;"
+            " background: #ffffff;"
+            " color: #1f2937;"
             " padding: 0 14px;"
             " font-size: 13px;"
             "}"

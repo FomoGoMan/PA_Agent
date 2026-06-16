@@ -6,9 +6,9 @@ from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QSizePolicy, QVBoxLayou
 
 
 _COLORS = {
-    "idle":   {"bg": "#1c2128", "border": "#484f58", "glow": None},
+    "idle":   {"bg": "#f5f7fa", "border": "#d1d5db", "glow": None},
     "done":   {"bg": "#22c55e", "border": "#22c55e", "glow": "rgba(34,197,94,0.18)"},
-    "active": {"bg": "#1c2128", "border": "#38bdf8", "glow": "rgba(56,189,248,0.20)"},
+    "active": {"bg": "#f5f7fa", "border": "#38bdf8", "glow": "rgba(56,189,248,0.20)"},
     "error":  {"bg": "#ef4444", "border": "#ef4444", "glow": "rgba(239,68,68,0.18)"},
 }
 
@@ -48,7 +48,7 @@ class _StepWidget(QFrame):
         self._dot = QLabel(self._glow)
         self._dot.setFixedSize(20, 20)
         self._dot.setStyleSheet(
-            "background-color: #1c2128; border: 2px solid #484f58; border-radius: 10px;"
+            "background-color: #f5f7fa; border: 2px solid #d1d5db; border-radius: 10px;"
         )
         glow_layout.addWidget(self._dot)
 
@@ -61,12 +61,12 @@ class _StepWidget(QFrame):
         text_col.setAlignment(Qt.AlignmentFlag.AlignVCenter)
 
         self._name = QLabel(name)
-        self._name.setStyleSheet("font-size: 12px; font-weight: bold; color: #e6edf3;")
+        self._name.setStyleSheet("font-size: 12px; font-weight: bold; color: #1f2937;")
         self._name.setMinimumWidth(0)
         text_col.addWidget(self._name)
 
         self._caption = QLabel(caption)
-        self._caption.setStyleSheet("font-size: 11px; color: #8b949e;")
+        self._caption.setStyleSheet("font-size: 11px; color: #6b7280;")
         self._caption.setMinimumWidth(0)
         self._caption.setWordWrap(False)
         self._caption.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Fixed)

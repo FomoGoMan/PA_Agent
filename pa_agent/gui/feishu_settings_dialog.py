@@ -111,7 +111,7 @@ class FeishuSettingsDialog(QDialog):
             "未填写时发送纯文字卡片（无图表截图）。"
         )
         img_hint.setWordWrap(True)
-        img_hint.setStyleSheet("color: #8b949e; font-size: 11px;")
+        img_hint.setStyleSheet("color: #6b7280; font-size: 11px;")
         img_form.addRow(img_hint)
 
         self._app_id_edit = QLineEdit()

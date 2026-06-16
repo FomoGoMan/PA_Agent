@@ -82,7 +82,7 @@ class _ModelOption(QWidget):
                 " border-radius: 6px;"
                 "}"
                 "_ModelOption:hover {"
-                " background-color: #21262d;"
+                " background-color: #f5f7fa;"
                 "}"
             )
             self._dot.setStyleSheet(
@@ -119,8 +119,8 @@ class ModelDropdown(QWidget):
         self._frame.setGraphicsEffect(shadow)
         self._frame.setStyleSheet(
             "QFrame {"
-            " background-color: #1c2128;"
-            " border: 1px solid #484f58;"
+            " background-color: #f5f7fa;"
+            " border: 1px solid #d1d5db;"
             " border-radius: 10px;"
             "}"
         )

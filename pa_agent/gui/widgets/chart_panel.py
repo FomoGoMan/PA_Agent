@@ -31,8 +31,8 @@ class ChartPanel(QWidget):
         titlebar = QWidget()
         titlebar.setFixedHeight(40)
         titlebar.setStyleSheet(
-            "background-color: #161b22;"
-            "border-bottom: 1px solid #30363d;"
+            "background-color: #f5f7fa;"
+            "border-bottom: 1px solid #e5e7eb;"
         )
         title_layout = QHBoxLayout(titlebar)
         title_layout.setContentsMargins(14, 0, 14, 0)
@@ -40,14 +40,14 @@ class ChartPanel(QWidget):
 
         self._title = QLabel("品种 · 周期")
         self._title.setStyleSheet(
-            "font-size: 14px; font-weight: bold; color: #e6edf3;"
+            "font-size: 14px; font-weight: bold; color: #1f2937;"
             "border: none; background: transparent;"
         )
         title_layout.addWidget(self._title)
 
         self._meta = QLabel("")
         self._meta.setStyleSheet(
-            "font-size: 12px; color: #8b949e;"
+            "font-size: 12px; color: #6b7280;"
             "border: none; background: transparent;"
         )
         title_layout.addWidget(self._meta)
@@ -70,8 +70,8 @@ class ChartPanel(QWidget):
         legend = QWidget()
         legend.setFixedHeight(28)
         legend.setStyleSheet(
-            "background-color: #161b22;"
-            "border-top: 1px solid #30363d;"
+            "background-color: #f5f7fa;"
+            "border-top: 1px solid #e5e7eb;"
         )
         legend_layout = QHBoxLayout(legend)
         legend_layout.setContentsMargins(14, 0, 14, 0)
@@ -98,8 +98,8 @@ class ChartPanel(QWidget):
         footer = QWidget()
         footer.setFixedHeight(28)
         footer.setStyleSheet(
-            "background-color: #161b22;"
-            "border-top: 1px solid #30363d;"
+            "background-color: #f5f7fa;"
+            "border-top: 1px solid #e5e7eb;"
         )
         footer_layout = QHBoxLayout(footer)
         footer_layout.setContentsMargins(14, 0, 14, 0)
@@ -108,7 +108,7 @@ class ChartPanel(QWidget):
         self._footer_hint_text = "滚轮缩放 · 拖拽平移 · 当前为分析快照"
         self._footer_left = QLabel(self._footer_hint_text)
         self._footer_left.setStyleSheet(
-            "font-size: 11px; color: #8b949e;"
+            "font-size: 11px; color: #6b7280;"
             "border: none; background: transparent;"
         )
         footer_layout.addWidget(self._footer_left)
@@ -117,7 +117,7 @@ class ChartPanel(QWidget):
 
         self._footer_right = QLabel("Price — · EMA20 —")
         self._footer_right.setStyleSheet(
-            "font: 11px monospace; color: #8b949e;"
+            "font: 11px monospace; color: #6b7280;"
             "border: none; background: transparent;"
         )
         footer_layout.addWidget(self._footer_right)
