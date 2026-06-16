@@ -92,6 +92,8 @@ class GeneralSettings(BaseModel):
     decision_confidence_threshold: int = Field(default=60, ge=0, le=100)
     #: 开启下根K线预期功能；关闭时不向模型请求该预测，节省 token
     enable_next_bar_prediction: bool = False
+    #: 日间模式：true=日间，false=夜间
+    theme_light: bool = False
 
     @field_validator("last_data_source", mode="before")
     @classmethod

@@ -192,6 +192,13 @@ class SettingsDialog(QDialog):
         self._chart_seq_font_spin.setToolTip("K 线图上 #1、#3… 序号标签的字体大小")
         general_form.addRow("图表K线序号字号:", self._chart_seq_font_spin)
 
+        self._theme_light_check = QCheckBox("切换到日间模式（浅色主题）")
+        self._theme_light_check.setToolTip(
+            "勾选后切换到日间模式，取消勾选切换到夜间模式。\n"
+            "重启程序后生效。"
+        )
+        general_form.addRow("主题:", self._theme_light_check)
+
         self._incremental_max_new_bars_spin = QSpinBox()
         self._incremental_max_new_bars_spin.setRange(0, 500)
         self._incremental_max_new_bars_spin.setSuffix(" 根")
@@ -285,6 +292,7 @@ class SettingsDialog(QDialog):
         self._context_warning_spin.setValue(int(g.context_warning_threshold_pct))
         self._stream_font_spin.setValue(int(getattr(g, "stream_pane_font_pt", 11)))
         self._chart_seq_font_spin.setValue(int(getattr(g, "chart_seq_label_font_pt", 7)))
+        self._theme_light_check.setChecked(bool(getattr(g, "theme_light", False)))
         self._incremental_max_new_bars_spin.setValue(
             int(getattr(g, "incremental_max_new_bars", 10))
         )
@@ -415,6 +423,7 @@ class SettingsDialog(QDialog):
         g.context_warning_threshold_pct = float(self._context_warning_spin.value())
         g.stream_pane_font_pt = self._stream_font_spin.value()
         g.chart_seq_label_font_pt = self._chart_seq_font_spin.value()
+        g.theme_light = self._theme_light_check.isChecked()
         g.incremental_max_new_bars = self._incremental_max_new_bars_spin.value()
         g.decision_stance = self._decision_stance_combo.currentData()  # type: ignore[assignment]
         g.enable_next_bar_prediction = self._enable_next_bar_check.isChecked()

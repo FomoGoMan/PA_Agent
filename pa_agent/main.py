@@ -18,13 +18,18 @@ def main(argv: list[str] | None = None) -> int:
     app = QApplication(argv)
     app.setApplicationName("PA Agent")
 
-    from pa_agent.gui.theme import apply_theme
-    apply_theme(app, light=light_mode)
-
-    logger.info("PA Agent starting up (light=%s)", light_mode)
-
     from pa_agent.app_context import AppContext
     ctx = AppContext.bootstrap()
+
+    # Check theme setting
+    settings_light = False
+    if ctx.settings is not None:
+        settings_light = getattr(ctx.settings.general, "theme_light", False)
+
+    from pa_agent.gui.theme import apply_theme
+    apply_theme(app, light=light_mode or settings_light)
+
+    logger.info("PA Agent starting up (light=%s)", light_mode or settings_light)
 
     if ctx.settings is not None:
         from pa_agent.util.logging import update_api_key
