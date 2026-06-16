@@ -94,6 +94,15 @@ class GeneralSettings(BaseModel):
     enable_next_bar_prediction: bool = False
     #: 日间模式：true=日间，false=夜间
     theme_light: bool = False
+    #: 信号预过滤设置
+    pre_filter_atr_min: float = Field(default=0.5, ge=0.0)
+    pre_filter_channel_width: float = Field(default=0.5, ge=0.0)
+    pre_filter_trend_slope: float = Field(default=0.3, ge=0.0)
+    #: 自动交易设置
+    auto_trade_enabled: bool = False
+    auto_trade_interval_ms: int = Field(default=3600000, ge=1000)
+    auto_trade_notify_qq: str = ""
+    auto_trade_notify_group: str = ""
 
     @field_validator("last_data_source", mode="before")
     @classmethod

@@ -199,7 +199,7 @@ class _AnalysisWorker(QThread):
 class MainWindow(QMainWindow):
     """Top-level workbench: chart + AI sidebar (analysis / raw / decision)."""
 
-    def __init__(self, ctx: AppContext, parent: QWidget | None = None) -> None:
+    def __init__(self, ctx: AppContext, parent: QWidget | None = None, *, silent: bool = False, auto_start: bool = False) -> None:
         super().__init__(parent)
         self.setWindowTitle(
             "PA Agent — Trading Terminal（分析仅供参考，不构成投资建议）"
@@ -207,6 +207,8 @@ class MainWindow(QMainWindow):
         self.resize(1440, 900)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self._ctx = ctx
+        self._silent = silent
+        self._auto_start = auto_start
         self._worker: _AnalysisWorker | None = None
         self._analysis_worker_id: object | None = None
         self._cancel_token: Any = None
@@ -252,6 +254,12 @@ class MainWindow(QMainWindow):
         self._connect_event_bus()
         self._update_ai_mode_label()
         self._sync_submit_button_state()
+
+        # Auto-start: enable keep_analysis and trigger data fetch
+        if self._auto_start:
+            logger.info("Auto-start mode: enabling keep_analysis and fetching data")
+            self._keep_analysis_checkbox.setChecked(True)
+            QTimer.singleShot(500, self._on_fetch_data_clicked)
 
     # ── UI construction ───────────────────────────────────────────────────────
 
@@ -3147,6 +3155,27 @@ class MainWindow(QMainWindow):
                     )
                 except Exception as _feishu_exc:  # noqa: BLE001
                     logger.warning("飞书通知失败（不影响主流程）: %s", _feishu_exc)
+
+                # ── QQ通知：下单信号推送 ─────────────────────────────────────
+                try:
+                    from pa_agent.notify.channels.base import TradeSignal
+                    from pa_agent.notify.channels.qq_channel import get_notifier
+                    notifier = get_notifier()
+                    if notifier.is_enabled():
+                        signal = TradeSignal(
+                            symbol=_meta_symbol,
+                            direction=inner.get("direction", ""),
+                            entry_price=float(inner.get("entry_price") or 0),
+                            stop_loss=float(inner.get("stop_loss") or 0),
+                            take_profit=float(inner.get("take_profit") or 0),
+                            confidence=int(decision.get("trade_confidence") or 0),
+                            summary=decision.get("diagnosis_summary", {}).get("content", "")[:200],
+                            order_type=inner.get("order_type", "market"),
+                            timeframe=_meta_timeframe,
+                        )
+                        asyncio.create_task(notifier.send(signal))
+                except Exception as _qq_exc:  # noqa: BLE001
+                    logger.warning("QQ通知失败（不影响主流程）: %s", _qq_exc)
 
             elif getattr(self, "_demo_mode", False):
                 self._present_decision_flow_playback(force_play=True)

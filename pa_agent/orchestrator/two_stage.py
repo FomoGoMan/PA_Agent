@@ -397,6 +397,32 @@ class TwoStageOrchestrator:
             on_event(OrchestratorEvent.InsufficientData)
             return record
 
+        # ── Step 2.6: Signal pre-filter ──────────────────────────────────────
+        from pa_agent.ai.signal_pre_filter import check_signal_filter
+        if self._settings is not None:
+            pf_result = check_signal_filter(
+                frame,
+                atr_min=getattr(self._settings.general, "pre_filter_atr_min", 0.5),
+                channel_width_atr=getattr(self._settings.general, "pre_filter_channel_width", 0.5),
+                trend_atr_slope=getattr(self._settings.general, "pre_filter_trend_slope", 0.3),
+            )
+        else:
+            pf_result = check_signal_filter(frame)
+        if not pf_result.ok:
+            record = record.model_copy(update={
+                "exception": {
+                    "type": "signal_filtered",
+                    "stage": "pre_filter",
+                    "skipped_by": pf_result.skipped_by,
+                    "detail": pf_result.detail,
+                    "message": pf_result.reason,
+                }
+            })
+            self._pending_writer.save_partial(record, f"pre_filtered_{pf_result.skipped_by}")
+            logger.info("信号预过滤跳过：%s — %s", pf_result.skipped_by, pf_result.reason)
+            on_event(OrchestratorEvent.InsufficientData)
+            return record
+
         # ── Step 3: Stage 1 started ───────────────────────────────────────────
         on_event(OrchestratorEvent.Stage1Started)
 
