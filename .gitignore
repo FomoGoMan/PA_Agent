@@ -25,6 +25,7 @@ config/secret.key
 config/tv_symbol_aliases.json
 config/feishu.json
 config/qq.json
+pa_agent/notify/channels/qq.json
 *.pem
 *.key
 

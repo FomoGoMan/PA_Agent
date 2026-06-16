@@ -1,14 +1,12 @@
-"""QQ notification channel using QQ Open Platform HTTP API."""
+"""QQ notification channel using botpy SDK with WebSocket connection."""
 from __future__ import annotations
 
-import base64
+import asyncio
 import json
 import logging
-import os
+from contextlib import suppress
 from pathlib import Path
 from typing import TYPE_CHECKING
-
-import requests
 
 from pa_agent.notify.channels.base import BaseNotifier, TradeSignal
 
@@ -18,14 +16,24 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 _CONFIG_PATH = Path(__file__).parent / "qq.json"
-_API_BASE = "https://api.sgroup.qq.com"
+
+# Check if botpy is available
+try:
+    import botpy
+    from botpy import Intents
+    from botpy.client import Client
+    import aiohttp
+    QQ_AVAILABLE = True
+except ImportError:
+    QQ_AVAILABLE = False
+    logger.warning("QQ notification: botpy not installed. Run: pip install qq-botpy")
 
 
 class QQNotifier(BaseNotifier):
-    """QQ notification channel using QQ Open Platform API.
+    """QQ notification channel using botpy SDK with WebSocket connection.
 
-    Supports sending messages to users (C2C) and groups via HTTP API.
-    Requires a QQ Official Bot with app_id and secret.
+    Maintains a persistent WebSocket connection with automatic heartbeat
+    and reconnection support.
     """
 
     name = "qq"
@@ -33,32 +41,13 @@ class QQNotifier(BaseNotifier):
 
     def __init__(self) -> None:
         self._config: dict = {}
-        self._access_token: str | None = None
-        self._token_expires_at: float = 0
+        self._client: Client | None = None
+        self._running = False
+        self._reconnect_delay = 5
         self._load_config()
 
     def _load_config(self) -> None:
-        """Load QQ configuration from nanobot config or local qq.json."""
-        # Try nanobot config first (~/.nanobot/config.json)
-        nanobot_config = Path.home() / ".nanobot" / "config.json"
-        if nanobot_config.exists():
-            try:
-                data = json.loads(nanobot_config.read_text(encoding="utf-8"))
-                qq_conf = data.get("qq", {})
-                if qq_conf.get("enabled"):
-                    self._config = {
-                        "enabled": True,
-                        "app_id": qq_conf.get("appId", ""),
-                        "secret": qq_conf.get("secret", ""),
-                        "notify_qq": "",
-                        "notify_group": "",
-                    }
-                    logger.info("QQ config loaded from nanobot config (~/.nanobot/config.json)")
-                    return
-            except Exception as exc:
-                logger.debug("Failed to load nanobot config: %s", exc)
-
-        # Fallback to local qq.json
+        """Load QQ configuration from qq.json."""
         if _CONFIG_PATH.exists():
             try:
                 self._config = json.loads(_CONFIG_PATH.read_text(encoding="utf-8"))
@@ -74,45 +63,58 @@ class QQNotifier(BaseNotifier):
         """Check if QQ notification is enabled."""
         return bool(self._config.get("enabled", False))
 
-    def _get_access_token(self) -> str | None:
-        """Get or refresh access token."""
-        import time
-
-        # Return cached token if still valid
-        if self._access_token and time.time() < self._token_expires_at - 60:
-            return self._access_token
+    async def start(self) -> None:
+        """Start the QQ bot with WebSocket connection and auto-reconnect."""
+        if not QQ_AVAILABLE:
+            logger.error("QQ notification: botpy not installed. Run: pip install qq-botpy")
+            return
 
         app_id = self._config.get("app_id", "")
         secret = self._config.get("secret", "")
 
         if not app_id or not secret:
-            logger.warning("QQ: app_id or secret not configured")
-            return None
+            logger.error("QQ notification: app_id or secret not configured")
+            return
 
-        token_url = f"{_API_BASE}/oauth2/authorize_robot_token"
-        try:
-            resp = requests.post(
-                token_url,
-                json={
-                    "app_id": app_id,
-                    "client_secret": secret,
-                    "grant_type": "client_credentials",
-                },
-                headers={"Content-Type": "application/json"},
-                timeout=10,
-            )
-            result = resp.json()
-            if result.get("code") == 0:
-                self._access_token = result.get("access_token")
-                expires_in = result.get("expires_in", 7200)
-                self._token_expires_at = time.time() + expires_in
-                return self._access_token
-            else:
-                logger.error("QQ: failed to get access token: %s", result)
-                return None
-        except Exception as exc:
-            logger.error("QQ: failed to get access token: %s", exc)
-            return None
+        self._running = True
+
+        # Create botpy Client
+        intents = Intents(public_messages=True, direct_message=True)
+
+        class _Bot(Client):
+            async def on_ready(self):
+                logger.info("QQ bot ready: %s", self.robot.name)
+
+            async def on_c2c_message_create(self, message):
+                pass  # We only send, don't receive
+
+            async def on_group_at_message_create(self, message):
+                pass  # We only send, don't receive
+
+            async def on_direct_message_create(self, message):
+                pass  # We only send, don't receive
+
+        self._client = _Bot(intents=intents, ext_handlers=False)
+        logger.info("QQ bot starting with WebSocket connection...")
+
+        # Run bot with reconnect loop
+        while self._running:
+            try:
+                await self._client.start(appid=app_id, secret=secret)
+            except Exception as e:
+                logger.warning("QQ bot error: %s", e)
+            if self._running:
+                logger.info("Reconnecting QQ bot in %d seconds...", self._reconnect_delay)
+                await asyncio.sleep(self._reconnect_delay)
+
+    async def stop(self) -> None:
+        """Stop the QQ bot and cleanup."""
+        self._running = False
+        if self._client:
+            with suppress(Exception):
+                await self._client.close()
+        self._client = None
+        logger.info("QQ bot stopped")
 
     async def send(self, signal: TradeSignal) -> bool:
         """Send a trade signal to QQ.
@@ -123,9 +125,8 @@ class QQNotifier(BaseNotifier):
             logger.debug("QQ notification disabled")
             return False
 
-        token = self._get_access_token()
-        if not token:
-            logger.error("QQ: cannot send without access token")
+        if self._client is None or not self._running:
+            logger.warning("QQ bot not connected, cannot send message")
             return False
 
         message = signal.format_simple()
@@ -133,80 +134,46 @@ class QQNotifier(BaseNotifier):
 
         notify_qq = self._config.get("notify_qq", "")
         if notify_qq:
-            ok = await self._send_c2c_message(token, notify_qq, message)
+            ok = await self._send_c2c_message(notify_qq, message)
             results.append(ok)
 
         notify_group = self._config.get("notify_group", "")
         if notify_group:
-            ok = await self._send_group_message(token, notify_group, message)
+            ok = await self._send_group_message(notify_group, message)
             results.append(ok)
 
         return any(results) if results else False
 
-    async def _send_c2c_message(self, token: str, openid: str, content: str) -> bool:
+    async def _send_c2c_message(self, openid: str, content: str) -> bool:
         """Send C2C (private) message to user."""
-        import aiohttp
+        if self._client is None:
+            return False
 
-        url = f"{_API_BASE}/v2/c2c_messages"
-        payload = {
-            "receive_id": openid,
-            "receive_id_type": "openid",
-            "msg_type": 0,
-            "content": json.dumps({"text": content}),
-            "msg_seq": int(openid[-8:], 16) if openid else 1,
-        }
         try:
-            async with aiohttp.ClientSession() as session:
-                resp = await session.post(
-                    url,
-                    json=payload,
-                    headers={
-                        "Content-Type": "application/json",
-                        "Authorization": f"QQBot {token}",
-                    },
-                    timeout=10.0,
-                )
-                result = await resp.json()
-                if result.get("code") == 0:
-                    logger.info("QQ C2C message sent to %s", openid)
-                    return True
-                else:
-                    logger.error("QQ C2C message failed: %s", result)
-                    return False
+            await self._client.api.post_c2c_message(
+                openid=openid,
+                msg_type=0,
+                content=json.dumps({"text": content}),
+            )
+            logger.info("QQ C2C message sent to %s", openid)
+            return True
         except Exception as exc:
             logger.error("QQ C2C message error: %s", exc)
             return False
 
-    async def _send_group_message(self, token: str, group_openid: str, content: str) -> bool:
+    async def _send_group_message(self, group_openid: str, content: str) -> bool:
         """Send group message."""
-        import aiohttp
+        if self._client is None:
+            return False
 
-        url = f"{_API_BASE}/v2/group_messages"
-        payload = {
-            "receive_id": group_openid,
-            "receive_id_type": "group_openid",
-            "msg_type": 0,
-            "content": json.dumps({"text": content}),
-            "msg_seq": int(group_openid[-8:], 16) if group_openid else 1,
-        }
         try:
-            async with aiohttp.ClientSession() as session:
-                resp = await session.post(
-                    url,
-                    json=payload,
-                    headers={
-                        "Content-Type": "application/json",
-                        "Authorization": f"QQBot {token}",
-                    },
-                    timeout=10.0,
-                )
-                result = await resp.json()
-                if result.get("code") == 0:
-                    logger.info("QQ group message sent to %s", group_openid)
-                    return True
-                else:
-                    logger.error("QQ group message failed: %s", result)
-                    return False
+            await self._client.api.post_group_message(
+                group_openid=group_openid,
+                msg_type=0,
+                content=json.dumps({"text": content}),
+            )
+            logger.info("QQ group message sent to %s", group_openid)
+            return True
         except Exception as exc:
             logger.error("QQ group message error: %s", exc)
             return False
@@ -214,6 +181,34 @@ class QQNotifier(BaseNotifier):
 
 # Global notifier instance
 _notifier: QQNotifier | None = None
+_bot_task: asyncio.Task | None = None
+
+
+async def _start_bot_async() -> None:
+    """Start the QQ bot in background."""
+    global _notifier
+    if _notifier is None:
+        _notifier = QQNotifier()
+    if _notifier.is_enabled():
+        await _notifier.start()
+
+
+def start_bot() -> None:
+    """Start the QQ bot in a background thread."""
+    global _bot_task
+    if _bot_task is None or _bot_task.done():
+        loop = asyncio.new_event_loop()
+        # Run in background thread
+        import threading
+        t = threading.Thread(target=lambda: loop.run_until_complete(_start_bot_async()), daemon=True)
+        t.start()
+
+
+async def stop_bot_async() -> None:
+    """Stop the QQ bot."""
+    global _notifier
+    if _notifier:
+        await _notifier.stop()
 
 
 def get_notifier() -> QQNotifier:
