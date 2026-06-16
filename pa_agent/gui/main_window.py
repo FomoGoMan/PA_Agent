@@ -205,6 +205,7 @@ class MainWindow(QMainWindow):
             "PA Agent — Trading Terminal（分析仅供参考，不构成投资建议）"
         )
         self.resize(1440, 900)
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self._ctx = ctx
         self._worker: _AnalysisWorker | None = None
         self._analysis_worker_id: object | None = None
@@ -229,7 +230,7 @@ class MainWindow(QMainWindow):
         self._free_chat_session: Any = None
         self._last_stage1_diagnosis: dict | None = None
         self._last_analysis_record: Any = None
-        self._last_analysis_frame: Any = None  # KlineFrame of the most recent analysis
+        self._last_analysis_frame: Any | None = None  # KlineFrame of the most recent analysis
         self._demo_mode = False
         self._demo_mode_kind: str | None = None  # manual | auto
         self._demo_record_path: str | None = None
