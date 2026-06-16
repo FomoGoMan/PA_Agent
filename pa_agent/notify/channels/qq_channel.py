@@ -38,7 +38,27 @@ class QQNotifier(BaseNotifier):
         self._load_config()
 
     def _load_config(self) -> None:
-        """Load QQ configuration from qq.json."""
+        """Load QQ configuration from nanobot config or local qq.json."""
+        # Try nanobot config first (~/.nanobot/config.json)
+        nanobot_config = Path.home() / ".nanobot" / "config.json"
+        if nanobot_config.exists():
+            try:
+                data = json.loads(nanobot_config.read_text(encoding="utf-8"))
+                qq_conf = data.get("qq", {})
+                if qq_conf.get("enabled"):
+                    self._config = {
+                        "enabled": True,
+                        "app_id": qq_conf.get("appId", ""),
+                        "secret": qq_conf.get("secret", ""),
+                        "notify_qq": "",
+                        "notify_group": "",
+                    }
+                    logger.info("QQ config loaded from nanobot config (~/.nanobot/config.json)")
+                    return
+            except Exception as exc:
+                logger.debug("Failed to load nanobot config: %s", exc)
+
+        # Fallback to local qq.json
         if _CONFIG_PATH.exists():
             try:
                 self._config = json.loads(_CONFIG_PATH.read_text(encoding="utf-8"))
@@ -48,7 +68,7 @@ class QQNotifier(BaseNotifier):
                 self._config = {}
         else:
             self._config = {}
-            logger.info("QQ config file not found at %s", _CONFIG_PATH)
+            logger.debug("QQ config file not found at %s", _CONFIG_PATH)
 
     def is_enabled(self) -> bool:
         """Check if QQ notification is enabled."""
