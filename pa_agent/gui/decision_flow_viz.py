@@ -806,7 +806,7 @@ class DecisionFlowVizPanel(QWidget):
         self._view.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self._view.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
         self._view.setTransformationAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
-        self._view.setBackgroundBrush(QBrush(QColor("#05070b")))
+        self._view.setBackgroundBrush(QBrush(QColor("#f5f7fa")))
 
         title = QLabel("决策路径可视化")
         title.setObjectName("toolbarTitle")
@@ -840,7 +840,7 @@ class DecisionFlowVizPanel(QWidget):
         self._hud_label = QLabel("")
         self._hud_label.setTextFormat(Qt.TextFormat.RichText)
         self._hud_label.setStyleSheet(
-            f"background-color: rgba(5, 13, 24, 220);"
+            f"background-color: rgba(245, 247, 250, 220);"
             f"border: 1px solid {_NEON_CYAN}; border-radius: 8px;"
             f"padding: 8px 10px; color: {T.TEXT_PRIMARY};"
             f"font-family: Consolas, 'Microsoft YaHei UI'; font-size: 12px;"

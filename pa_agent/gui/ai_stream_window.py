@@ -168,7 +168,7 @@ class AIStreamPanel(QWidget):
         box.setStyleSheet(
             "QWidget {"
             " background: #f5f7fa;"
-            " border-top: 1px solid #30363d;"
+            " border-top: 1px solid #e5e7eb;"
             "}"
         )
         row = QHBoxLayout(box)

@@ -80,7 +80,7 @@ class SummaryStrip(QWidget):
         self.setObjectName("summaryStrip")
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
         self.setStyleSheet(
-            "background-color: #f5f7fa; border-bottom: 1px solid #30363d;"
+            "background-color: #f5f7fa; border-bottom: 1px solid #e5e7eb;"
         )
 
         self._layout = QGridLayout(self)
