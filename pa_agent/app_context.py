@@ -71,7 +71,9 @@ class AppContext:
         ds_kind = normalize_data_source_kind(
             getattr(settings.general, "last_data_source", "mt5")
         )
-        data_source = create_data_source(ds_kind)
+        tv_username = getattr(settings.general, "tv_username", "") or ""
+        tv_password = getattr(settings.general, "tv_password", "") or ""
+        data_source = create_data_source(ds_kind, tv_username=tv_username, tv_password=tv_password)
 
         # Subscribe to the last-used symbol/timeframe from settings
         try:

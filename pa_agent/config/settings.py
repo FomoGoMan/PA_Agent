@@ -13,8 +13,8 @@ class AIProviderSettings(BaseModel):
     """AI provider connection and behaviour settings."""
     model_config = ConfigDict(extra="ignore")
 
-    model: str = "deepseek-v4-flash"
-    base_url: str = "https://api.deepseek.com"
+    model: str = "MiniMax-M2.7"
+    base_url: str = "https://api.minimaxi.com/anthropic"
     api_key: str = ""
     api_key_encrypted: str = ""
     thinking: bool = True
@@ -94,6 +94,9 @@ class GeneralSettings(BaseModel):
     enable_next_bar_prediction: bool = False
     #: 日间模式：true=日间，false=夜间
     theme_light: bool = False
+    #: TradingView 登录凭证
+    tv_username: str = ""
+    tv_password: str = ""
     #: 信号预过滤设置
     pre_filter_atr_min: float = Field(default=0.5, ge=0.0)
     pre_filter_channel_width: float = Field(default=0.5, ge=0.0)

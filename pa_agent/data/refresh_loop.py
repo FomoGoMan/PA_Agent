@@ -116,5 +116,13 @@ class RefreshLoop(QThread):
             elapsed_ms = (time.monotonic() - t0) * 1000
             sleep_ms = max(0.0, self._interval_ms - elapsed_ms)
             if sleep_ms > 0:
-                time.sleep(sleep_ms / 1000.0)
+                # Sleep in short chunks so we can respond to cancel signals
+                # without accumulating excessive latency when interval_ms is large.
+                chunk_s = min(sleep_ms / 1000.0, 30.0)
+                remaining = sleep_ms / 1000.0
+                while remaining > 0 and self._cancel_token is not None and not self._cancel_token.is_set():
+                    time.sleep(chunk_s)
+                    remaining -= chunk_s
+                if self._cancel_token is not None and self._cancel_token.is_set():
+                    break
 

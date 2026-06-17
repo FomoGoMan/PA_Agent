@@ -129,7 +129,11 @@ class QQNotifier(BaseNotifier):
             logger.warning("QQ bot not connected, cannot send message")
             return False
 
-        message = signal.format_simple()
+        # 如果信号没有有效的交易数据（品种为空），发送纯文本摘要
+        if signal.symbol or signal.direction:
+            message = signal.format_simple()
+        else:
+            message = signal.summary
         results = []
 
         notify_qq = self._config.get("notify_qq", "")
@@ -153,7 +157,7 @@ class QQNotifier(BaseNotifier):
             await self._client.api.post_c2c_message(
                 openid=openid,
                 msg_type=0,
-                content=json.dumps({"text": content}),
+                content=content,
             )
             logger.info("QQ C2C message sent to %s", openid)
             return True
@@ -170,7 +174,7 @@ class QQNotifier(BaseNotifier):
             await self._client.api.post_group_message(
                 group_openid=group_openid,
                 msg_type=0,
-                content=json.dumps({"text": content}),
+                content=content,
             )
             logger.info("QQ group message sent to %s", group_openid)
             return True
@@ -182,11 +186,12 @@ class QQNotifier(BaseNotifier):
 # Global notifier instance
 _notifier: QQNotifier | None = None
 _bot_task: asyncio.Task | None = None
+_bot_loop: asyncio.AbstractEventLoop | None = None
 
 
 async def _start_bot_async() -> None:
     """Start the QQ bot in background."""
-    global _notifier
+    global _notifier, _bot_loop
     if _notifier is None:
         _notifier = QQNotifier()
     if _notifier.is_enabled():
@@ -195,13 +200,18 @@ async def _start_bot_async() -> None:
 
 def start_bot() -> None:
     """Start the QQ bot in a background thread."""
-    global _bot_task
+    global _bot_task, _bot_loop
     if _bot_task is None or _bot_task.done():
-        loop = asyncio.new_event_loop()
+        _bot_loop = asyncio.new_event_loop()
         # Run in background thread
         import threading
-        t = threading.Thread(target=lambda: loop.run_until_complete(_start_bot_async()), daemon=True)
+        t = threading.Thread(target=lambda: _bot_loop.run_until_complete(_start_bot_async()), daemon=True)
         t.start()
+
+
+def get_bot_loop() -> asyncio.AbstractEventLoop | None:
+    """Get the bot's event loop for scheduling coroutines from other threads."""
+    return _bot_loop
 
 
 async def stop_bot_async() -> None:

@@ -90,6 +90,11 @@ class TradingViewSource(DataSource):
         # WebSocket and stores it on self.ws; concurrent calls clobber the
         # same socket and cause C++ segfaults.
         self._snapshot_lock = threading.Lock()
+        # Event to cancel a blocked fetch from another thread (e.g. zombie reaper).
+        # A zombie RefreshLoop holding the lock can be interrupted by having the
+        # main thread set this flag and close the socket, which raises inside the
+        # blocked recv().
+        self._cancel_fetch = threading.Event()
         # Callback for status updates during auto-probe: fn(symbol, exchange, label)
         self.on_probe_status = None
 
@@ -129,6 +134,7 @@ class TradingViewSource(DataSource):
         self._close_tv_socket()
         self._tv = None
         self._connected = False
+        self._cancel_fetch.clear()
         logger.info("TradingViewSource disconnected")
 
     def _close_tv_socket(self) -> None:
@@ -249,6 +255,9 @@ class TradingViewSource(DataSource):
                 # trip TradingView rate limiting; the next call reconnects.
                 self._close_tv_socket()
             if attempt < _TV_FETCH_RETRIES:
+                # Check if another thread (zombie reaper) is trying to cancel us.
+                if self._cancel_fetch.is_set():
+                    raise DataSourceTransientError("Fetch cancelled by zombie reaper")
                 time.sleep(_TV_FETCH_RETRY_SLEEP_S)
         if last_exc is not None:
             raise last_exc
@@ -318,6 +327,9 @@ class TradingViewSource(DataSource):
 
     def _latest_snapshot_inner(self, n: int) -> list[KlineBar]:
         """Actual snapshot logic — caller holds ``_snapshot_lock``."""
+        # Check if another thread (zombie reaper) is trying to cancel us.
+        if self._cancel_fetch.is_set():
+            raise DataSourceTransientError("Fetch cancelled — zombie reaper signaled")
         if self._tv is None:
             raise DataSourceTransientError("TradingView 未连接，请先选择数据来源 TradingView")
         if not self._symbol or not self._timeframe:

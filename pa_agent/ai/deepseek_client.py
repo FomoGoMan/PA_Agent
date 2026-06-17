@@ -138,9 +138,9 @@ def _is_packyapi(base_url: str) -> bool:
 
 
 def _is_minimax(base_url: str) -> bool:
-    """MiniMax (api.minimax.io) OpenAI-compatible gateway."""
+    """MiniMax (api.minimax.io / api.minimaxi.com) OpenAI-compatible gateway."""
     url = (base_url or "").lower()
-    return "minimax.io" in url or "minimax.com" in url
+    return "minimax.io" in url or "minimax.com" in url or "minimaxi.com" in url
 
 
 # Packy claude-officially returns 400 if max_tokens exceeds model output cap.
@@ -251,6 +251,9 @@ def _provider_max_output_tokens(settings: AIProviderSettings) -> int:
         return _DEEPSEEK_MAX_OUTPUT_TOKENS
     if _is_mimo(settings):
         return mimo_max_output_tokens(settings.model)
+    if _is_minimax(settings.base_url):
+        # MiniMax M2.x models cap at 196608 max_tokens when thinking is enabled.
+        return 196608
     return _PRACTICAL_UNLIMITED_MAX_TOKENS
 
 

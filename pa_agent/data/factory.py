@@ -63,13 +63,17 @@ def default_symbol_for_kind(kind: str | None) -> str:
     return _DEFAULT_SYMBOLS[normalize_data_source_kind(kind)]
 
 
-def create_data_source(kind: str | None) -> DataSource:
+def create_data_source(
+    kind: str | None,
+    tv_username: str = "",
+    tv_password: str = "",
+) -> DataSource:
     """Instantiate a fresh data source for *kind* (not connected)."""
     normalized = normalize_data_source_kind(kind)
     if normalized == "tradingview":
         from pa_agent.data.tradingview import TradingViewSource
 
-        return TradingViewSource()
+        return TradingViewSource(username=tv_username, password=tv_password)
     if normalized == "eastmoney":
         from pa_agent.data.eastmoney_source import EastMoneySource
 

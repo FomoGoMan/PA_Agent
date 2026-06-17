@@ -31,8 +31,10 @@ from pa_agent.gui.validation_debug_dialog import show_validation_debug_dialog
 
 logger = logging.getLogger(__name__)
 
-# Zombie timeout in milliseconds (5 seconds)
-_WORKER_JOIN_TIMEOUT_MS = 5000
+# Zombie timeout in milliseconds.
+# BTCUSD first fetch over TradingView can take 60+ seconds, so we allow
+# up to 90 seconds before treating a loop as a zombie that needs replacement.
+_WORKER_JOIN_TIMEOUT_MS = 90000
 
 
 def _qobject_alive(obj: QObject | None) -> bool:
@@ -659,11 +661,19 @@ class MainWindow(QMainWindow):
 
     def _start_refresh_loop(self) -> None:
         """Start the RefreshLoop only when the data source is connected."""
+        print("START_REFRESH: called", flush=True)
         # Reap any zombie workers / loops before starting a fresh one
         self._reap_zombie_workers()
         self._reap_zombie_loops()
 
         data_source = getattr(self._ctx, "data_source", None)
+        # Clear any stale zombie-cancel flag so a fresh loop doesn't
+        # immediately abort when it tries to acquire _snapshot_lock.
+        if data_source is not None:
+            cancel_fetch = getattr(data_source, "_cancel_fetch", None)
+            if cancel_fetch is not None:
+                cancel_fetch.clear()
+        print(f"START_REFRESH: data_source={data_source is not None}", flush=True)
         if data_source is None:
             logger.debug("RefreshLoop not started: data_source not available")
             return
@@ -693,12 +703,14 @@ class MainWindow(QMainWindow):
             interval_ms=interval_ms,
             cancel_token=self._refresh_cancel_token,
         )
+        print("START_REFRESH: RefreshLoop created", flush=True)
 
         # Wire RefreshLoop signals
         self._refresh_loop.frame_ready.connect(self._on_refresh_frame_ready)
         self._refresh_loop.status_changed.connect(self._on_status_update)
 
         self._refresh_loop.start()
+        print("START_REFRESH: started", flush=True)
         logger.info("RefreshLoop started for %s %s",
                     getattr(data_source, "_symbol", "?"),
                     getattr(data_source, "_timeframe", "?"))
@@ -758,6 +770,27 @@ class MainWindow(QMainWindow):
                     zombies = []
                     self._zombie_loops = zombies
                 zombies.append(loop)
+                self._refresh_loop = None
+                self._refresh_cancel_token = None
+                # Signal the zombie to abort its fetch immediately, then close the socket.
+                # The _cancel_fetch flag is checked by latest_snapshot inside the
+                # lock, so the zombie will exit its fetch and release the lock.
+                ctx = getattr(self, "_ctx", None)
+                data_source = getattr(ctx, "data_source", None) if ctx else None
+                if data_source is not None:
+                    cancel_fetch = getattr(data_source, "_cancel_fetch", None)
+                    if cancel_fetch is not None:
+                        cancel_fetch.set()
+                        print("ZOMBIE: set _cancel_fetch", flush=True)
+                    close_ws = getattr(data_source, "_close_tv_socket", None)
+                    if callable(close_ws):
+                        try:
+                            close_ws()
+                            print("ZOMBIE: closed WebSocket", flush=True)
+                        except Exception as e:
+                            print(f"ZOMBIE: close_ws failed: {e}", flush=True)
+                logger.info("Zombie detected, will be reaped when it finishes")
+                return
             else:
                 loop.deleteLater()
         else:
@@ -1595,6 +1628,22 @@ class MainWindow(QMainWindow):
         import time as _time
 
         self._update_wait_close_countdown_display()
+
+        # Reap zombie RefreshLoops and restart if needed (handles slow first fetch)
+        zombies = getattr(self, "_zombie_loops", None)
+        print(f"TICKER: zombies={zombies}, loop={getattr(self, '_refresh_loop', None)}", flush=True)
+        if zombies:
+            self._reap_zombie_loops()
+            # If RefreshLoop is not running after reaping, restart it
+            loop = getattr(self, "_refresh_loop", None)
+            if loop is None or not loop.isRunning():
+                self._refresh_loop = None
+                ctx = getattr(self, "_ctx", None)
+                data_source = getattr(ctx, "data_source", None) if ctx else None
+                if data_source is not None and getattr(data_source, "_connected", False):
+                    print("TICKER: restarting RefreshLoop", flush=True)
+                    logger.info("Restarting RefreshLoop after zombie reaping")
+                    self._start_refresh_loop()
 
         label = getattr(self, "_refresh_elapsed_label", None)
         if label is None:

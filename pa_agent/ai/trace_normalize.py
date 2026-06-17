@@ -126,6 +126,9 @@ _GENERIC_ANSWER: dict[str, str] = {
     "尚未确认": "等待",
     "未确认": "等待",
     "不确定": "中性",
+    # Direction alignment answers (同向 = same direction = "是", 异向 = opposite = "否")
+    "同向": "是",
+    "异向": "否",
 }
 
 _BAR_RANGE_ALIASES = frozenset({"全局", "全图", "整体", "全部", "all"})
